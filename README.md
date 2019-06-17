@@ -10,19 +10,19 @@ Passphrase-based unlocking is still supported - specify the port your SSH server
 **Workflow**
   
 * keyfile-based unlocking  
-	0) SSH server listening on port 22, supporting SCP  
-	1) knock on e.g. port 23 (or any unused port as configured in /etc/knockencryptssh/knockd.conf), e.g. by calling "telnet &lt;your-host&gt; 23"  
-	2) transmit the keyfile by SCP to your SSH server listening on port 22  
-	3) done  
+	-> SSH server listening on port 22, supporting SCP  
+	-> knock on e.g. port 23 (or any unused port as configured in /etc/knockencryptssh/knockd.conf), e.g. by calling "telnet &lt;your-host&gt; 23"  
+	-> transmit the keyfile by SCP to your SSH server listening on port 22  
+	-> done  
   
   
 * passphrase-based unlocking  
-	0) SSH server listening on port 22  
-	1) open a SSH connection, a terminal will ask you to enter the passphrase  
-	2) done  
+	-> SSH server listening on port 22  
+	-> open a SSH connection, a terminal will ask you to enter the passphrase  
+	-> done  
   
   
-** Configuration **
+**Configuration**
   
 * Configuration of knockd can be changed in /etc/knockencryptssh/knockd.conf  
     -> In section "options" make sure the interface matches your system
@@ -33,11 +33,11 @@ Passphrase-based unlocking is still supported - specify the port your SSH server
     -> There shouldn't be any configuration needed  
   
   
-** Examples **
+**Examples**
   
 You'll find simple examples (they need adjustments to match your environment) in "examples/"
   
   
-** Thanks **
+**Thanks**
   
 Big thanks to Giancarlo Razzolini for creating [mkinitcpio-utils](https://github.com/grazzolini/mkinitcpio-utils), which mkinitcpio-knockencryptssh is based on.  
