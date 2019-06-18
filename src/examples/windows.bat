@@ -12,7 +12,7 @@ SET CAD_PUTTY_PROFILE=my-server
 
 REM Knock on port <CAD_TARGET_KNOCK_PORT> to prepare knockencryptssh
 SET CAD_WINDOW_TITLE="TelnetPortKnockForKnockEncryptSSH-%RANDOM%"
-START /B /WAIT "%CAD_WINDOW_TITLE%" telnet %CAD_TARGET_HOST% %CAD_TARGET_KNOCK_PORT% >NUL 2>&1
+START /WAIT "%CAD_WINDOW_TITLE%" telnet %CAD_TARGET_HOST% %CAD_TARGET_KNOCK_PORT% >NUL 2>&1
 taskkill /FI "WINDOWTITLE eq %CAD_WINDOW_TITLE%" /T /F >NUL 2>&1
 
 REM Sleep a second so the shell can be switched

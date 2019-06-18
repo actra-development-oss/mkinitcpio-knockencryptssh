@@ -48,18 +48,17 @@ code_for_encryptssh() {
     add_binary "cryptsetup"
     add_binary "dmsetup"
     add_binary "killall"
-    add_binary "awk"
     add_file "/usr/lib/udev/rules.d/10-dm.rules"
     add_file "/usr/lib/udev/rules.d/13-dm-disk.rules"
     add_file "/usr/lib/udev/rules.d/95-dm-notify.rules"
     add_file "/usr/lib/initcpio/udev/11-dm-initramfs.rules" "/usr/lib/udev/rules.d/11-dm-initramfs.rules"
 
-    add_binary "/usr/share/mkinitcpio-utils/utils/shells/cryptsetup_shell" "/bin/cryptsetup_shell"
+    add_binary "/usr/share/mkinitcpio-knockencryptssh/utils/shells/cryptsetup_shell" "/bin/cryptsetup_shell"
 }
 
 build() {
     withKnock="no"
-    if [ -r "/etc/knockencryptssh/knockencryptssh.conf" -a -s "/etc/knockencryptssh/knockencryptssh.conf" -a -r "/etc/knockencryptssh/knockd.conf" -a -s "/etc/knockencryptssh/knockd.conf" ];
+    if [ -r "/etc/knockencryptssh/knockd.conf" -a -s "/etc/knockencryptssh/knockd.conf" ];
     then
         echo "Building with knockd and keyfile transfer support"
         
@@ -67,7 +66,7 @@ build() {
         
         code_for_knock
     else
-        echo "There is either no knockencryptssh.conf or no knockd.conf in /etc/knockencryptssh; building without knockd and keyfile support"
+        echo "There is no knockd.conf in /etc/knockencryptssh; building without knockd and keyfile support"
         
         return 0
     fi

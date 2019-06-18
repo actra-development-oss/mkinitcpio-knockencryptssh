@@ -1,23 +1,9 @@
 #!/bin/bash
 
 
-declare -A KES_CONF
-declare -A KNOCKD_CONF
-OLDIFS="${IFS}"
-while IFS='=' read -r key value; do KES_CONF[$key]="$value"; done < <(awk '/^\[/ { section=substr($0, 2, length - 2) } /=/ { print section "." $0 }' /etc/knockencryptssh/knockencryptssh.conf)
-while IFS='=' read -r key value; do KNOCKD_CONF[$key]="$value"; done < <(awk '/^\[/ { section=substr($0, 2, length - 2) } /=/ { print section "." $0 }' /etc/knockencryptssh/knockd.conf)
-IFS="${OLDIFS}"
-
-
-if [ "x${KES_CONF[knockencryptssh.keyfile]}" == "x" ]; then
-    echo "No [knockencryptssh]keyfile given in /etc/knockencryptssh/knockencryptssh.conf" >&2
-    exit 1
-fi
-
-if [ "x${KES_CONF[knockencryptssh.tempdir]}" == "x" ]; then
-    echo "No [knockencryptssh]tempdir given in /etc/knockencryptssh/knockencryptssh.conf" >&2
-    exit 1
-fi
+KES_KEYFILE="keyfile.bin"
+KES_TEMPDIR="/tmp/knockencryptssh_initrd"
+KNOCKD_PIDFILE="/var/run/knockd-knockencryptssh.pid"
 
 
 do_magic() {
@@ -32,7 +18,7 @@ do_magic() {
         [ "${quiet}" = "y" ] && CSQUIET=">/dev/null"
 
         # Get keyfile if specified
-        ckeyfile="/${KES_CONF[knockencryptssh.keyfile]}"
+        ckeyfile="/${KES_KEYFILE}"
         keyfileFromCryptkey=no
         
         if [ "x${cryptkey}" != "x" ]; then
@@ -227,12 +213,12 @@ do_magic() {
 }
 
 start_watching() {
-    # Remove $KES_CONF[knockencryptssh.tempdir] so we start clean and don't catch old knockfiles
-    if [ "x${KES_CONF[knockencryptssh.tempdir]}" != "x" -a -d "${KES_CONF[knockencryptssh.tempdir]}" ]; then
-        rm -rf "${KES_CONF[knockencryptssh.tempdir]}"
+    # Remove $KES_TEMPDIR so we start clean and don't catch old knockfiles
+    if [ "x${KES_TEMPDIR}" != "x" -a -d "${KES_TEMPDIR}" ]; then
+        rm -rf "${KES_TEMPDIR}"
     fi
     
-    mkdir -p "${KES_CONF[knockencryptssh.tempdir]}"
+    mkdir -p "${KES_TEMPDIR}"
     
     # Reset shell
     chsh -s /bin/cryptsetup_shell root >/dev/null 2>&1
@@ -240,20 +226,20 @@ start_watching() {
     echo "  Watcher started."
     
     # Wait for knock
-    ( timeout 600 inotifywait -e create,open,close_write,modify --format "%f" --quiet "${KES_CONF[knockencryptssh.tempdir]}" --monitor & ) | while read i; do if [ "$i" == "knockencryptssh.keyfile" -o "$i" == "knockencryptssh.passphrase" ]; then break; fi; done
+    ( timeout 600 inotifywait -e create,open,close_write,modify --format "%f" --quiet "${KES_TEMPDIR}" --monitor & ) | while read i; do if [ "$i" == "knockencryptssh.keyfile" -o "$i" == "knockencryptssh.passphrase" ]; then break; fi; done
     
-    if [ -r "${KES_CONF[knockencryptssh.tempdir]}/knockencryptssh.keyfile" -o -r "${KES_CONF[knockencryptssh.tempdir]}/knockencryptssh.passphrase" ]; then
-        if [ -r "${KES_CONF[knockencryptssh.tempdir]}/knockencryptssh.keyfile" ]; then
+    if [ -r "${KES_TEMPDIR}/knockencryptssh.keyfile" -o -r "${KES_TEMPDIR}/knockencryptssh.passphrase" ]; then
+        if [ -r "${KES_TEMPDIR}/knockencryptssh.keyfile" ]; then
             echo "  => Knock appeared, waiting for keyfile..."
             
             # Change shell so we can use SCP
             chsh -s /bin/bash root >/dev/null 2>&1
             
             # Wait two minutes for the keyfile to appear
-            ( timeout 120 inotifywait -e close_write --format "%f" --quiet "/" --monitor & ) | while read i; do if [ "$i" == "${KES_CONF[knockencryptssh.keyfile]}" ]; then break; fi; done
+            ( timeout 120 inotifywait -e close_write --format "%f" --quiet "/" --monitor & ) | while read i; do if [ "$i" == "${KES_KEYFILE}" ]; then break; fi; done
             
-            if [ -r "/${KES_CONF[knockencryptssh.keyfile]}" ]; then
-                if [ -r "/${KES_CONF[knockencryptssh.keyfile]}" -a -s "/${KES_CONF[knockencryptssh.keyfile]}" ]; then
+            if [ -r "/${KES_KEYFILE}" ]; then
+                if [ -r "/${KES_KEYFILE}" -a -s "/${KES_KEYFILE}" ]; then
                     echo "    => Keyfile transmitted, going to decrypt..."
                     
                     # Reset shell before doing magic
@@ -288,7 +274,7 @@ start_watching() {
                 
                 return $watcherResult
             fi
-        elif [ -r "${KES_CONF[knockencryptssh.tempdir]}/knockencryptssh.passphrase" ]; then
+        elif [ -r "${KES_TEMPDIR}/knockencryptssh.passphrase" ]; then
             echo "  => Knock appeared, waiting for passphrase..."
             
             do_magic
@@ -330,8 +316,8 @@ run_hook() {
     [ -d /dev/pts ] || mkdir -p /dev/pts
     mount -t devpts devpts /dev/pts
     
-    # Verify that bash is set in /etc/shells and config files exist, otherwise knocking and keyfiles aren't enabled
-    if [ grep -q "/bin/bash" "/etc/shells" -a -r /etc/knockencryptssh/knockencryptssh.conf -a -r /etc/knockencryptssh/knockd.conf ]; then
+    # Verify that bash is set in /etc/shells and knockd.conf exists, otherwise knocking and keyfiles aren't enabled
+    if [ $(grep -c "/bin/bash" "/etc/shells") -ne 0 -a -r /etc/knockencryptssh/knockd.conf ]; then
         echo "Enabling knocking, starting watcher..."
         enable_knock
         hookResult=$?
@@ -348,16 +334,16 @@ run_hook() {
 }
 
 run_cleanuphook() {
-    # Verify that bash is set in /etc/shells and config files exist, otherwise knocking and keyfiles aren't enabled
-    if [ grep -q "/bin/bash" "/etc/shells" -a -r /etc/knockencryptssh/knockencryptssh.conf -a -r /etc/knockencryptssh/knockd.conf ]; then
-        if [ -f "$KNOCKD_CONF[options.pidfile]" ]
+    # Verify that bash is set in /etc/shells and knockd.conf exists, otherwise knocking and keyfiles aren't enabled
+    if [ $(grep -c "/bin/bash" "/etc/shells") -ne 0 -a -r /etc/knockencryptssh/knockd.conf ]; then
+        if [ -f "${KNOCKD_PIDFILE}" ]
         then
-            kill `cat "$KNOCKD_CONF[options.pidfile]"`
+            kill `cat "${KNOCKD_PIDFILE}"`
         fi
         
-        # Remove $KES_CONF[knockencryptssh.tempdir] as we're done
-        if [ "x${KES_CONF[knockencryptssh.tempdir]}" != "x" -a -d "${KES_CONF[knockencryptssh.tempdir]}" ]; then
-            rm -rf "${KES_CONF[knockencryptssh.tempdir]}"
+        # Remove $KES_TEMPDIR as we're done
+        if [ "x${KES_TEMPDIR}" != "x" -a -d "${KES_TEMPDIR}" ]; then
+            rm -rf "${KES_TEMPDIR}"
         fi
     fi
 }
