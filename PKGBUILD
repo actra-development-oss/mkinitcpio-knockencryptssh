@@ -26,16 +26,15 @@ backup=('etc/knockencryptssh/knockencryptssh.conf'
 options=()
 install='mkinitcpio-knockencryptssh.install'
 changelog=
-source=('mkinitcpio-knockencryptssh.tar')
+source=('mkinitcpio-knockencryptssh.tar.gz')
 noextract=()
-md5sums=('b8e11cc730cfe2f5772b8833f9795fdd')
+md5sums=('fdc6570659e482210dae8978b11f0357')
 validpgpkeys=()
 
 package() {
   install -Dm 644 src/usr/lib/initcpio/hooks/knockencryptssh "${pkgdir}/usr/lib/initcpio/hooks/knockencryptssh"
   install -Dm 644 src/usr/lib/initcpio/install/knockencryptssh "${pkgdir}/usr/lib/initcpio/install/knockencryptssh"
   mkdir -p -m 755 "${pkgdir}/etc/knockencryptssh"
-  install -Dm 644 src/etc/knockencryptssh/knockencryptssh.conf "${pkgdir}/etc/knockencryptssh/knockencryptssh.conf"
   install -Dm 644 src/etc/knockencryptssh/knockd.conf "${pkgdir}/etc/knockencryptssh/knockd.conf"
   install -Dm 755 src/etc/knockencryptssh/knocked.sh "${pkgdir}/etc/knockencryptssh/knocked.sh"
   mkdir -p -m 755 "${pkgdir}/usr/share/mkinitcpio-knockencryptssh/utils/shells"
