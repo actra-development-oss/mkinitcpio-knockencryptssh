@@ -21,8 +21,7 @@ optdepends=()
 provides=()
 conflicts=()
 replaces=()
-backup=('etc/knockencryptssh/knockencryptssh.conf'
-        'etc/knockencryptssh/knockd.conf')
+backup=('etc/knockencryptssh/knockd.conf')
 options=()
 install='mkinitcpio-knockencryptssh.install'
 changelog=
